@@ -1,0 +1,97 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Logs
+.logs/
+*.log
+npm-debug.log*
+
+# Build outputs
+client/dist/
+client/build/
+client/build_log.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.antigravity/
+.antigravity-ide/
+
+
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+production_plan.md
+
+# Misc
+*.tgz
+coverage/
+.nyc_output/
+
+# Large local-only files (do NOT push to GitHub)
+pricepilot-references.txt
+website_wording_audit.txt
+server/reset-link-debug.txt
+diff.txt
+out.json
+
+client/build_log.txt
+
+analysis_results.md
+
+.claude/
+.agents/
+
+
+AGENTS.md
+GEMINI.md
+pricepilot_technical_audit.md
+pricepilot_technical_audit_v2.md
+VERCEL_DEPLOYMENT.md
+RENDER_DEPLOYMENT.md
+docs/agents/domain.md
+docs/agents/issue-tracker.md
+docs/agents/triage-labels.md
+docs/*
+Procfile
+
+skills-lock.json
+codebase-analysis-report.md
+.playwright-mcp
+.gnhf*
+.planning/*
+.lavish/*
+graphify-out/*
+.gstack/
+.gstack-reports/*
+
+# AI Evaluation generated run artifacts
+ai-service/evaluation_reports/eval_results_*.json
+ai-service/evaluation_reports/eval_report_*.md
+ai-service/models/*eval_*
+ai-service/models/*test_user*
+ai-service/.coverage
+ai-service/evaluation_reports/*
+
+# Local preparation files and historical backups
+.preparation-backups/
+README_invenza_draft.md
+README_original_backup.md
+
+# Local model registry and generated shadow evaluation log
+CLAUDE.md
+render.yaml
+ai-service/server_log.txt
+server/debug-auth.js

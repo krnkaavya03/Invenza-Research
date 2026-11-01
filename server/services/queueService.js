@@ -1,0 +1,235 @@
+const { Queue, Worker } = require('bullmq');
+const redisClient = require('../config/redis');
+const axios = require('axios');
+const Product = require('../models/Product');
+const CompetitorPrice = require('../models/CompetitorPrice');
+const DemandSignal = require('../models/DemandSignal');
+const PricingRecommendation = require('../models/PricingRecommendation');
+const InventoryForecast = require('../models/InventoryForecast');
+const DailySalesMetric = require('../models/DailySalesMetric');
+
+const AI_URL = (process.env.AI_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
+
+const recommendationQueue = new Queue('recommendationQueue', { connection: redisClient });
+const forecastQueue = new Queue('forecastQueue', { connection: redisClient });
+
+// Prefix constants to avoid job ID collisions between queues
+const RECOMMENDATION_JOB_PREFIX = 'rec_';
+const FORECAST_JOB_PREFIX = 'fc_';
+
+const recommendationWorker = new Worker('recommendationQueue', async job => {
+    const { productId } = job.data;
+    const product = await Product.findById(productId);
+    if (!product) throw new Error('Product not found');
+
+    const competitorPrices = await CompetitorPrice.find({ productId }).sort({ timestamp: -1 }).limit(10);
+    const demandSignals = await DemandSignal.find({ productId }).sort({ timestamp: -1 }).limit(30);
+    const salesMetrics = await DailySalesMetric.find({ productId, userId: product.userId }).sort({ date: 1 }).limit(365);
+
+    const detectedBrand = (product.brand || product.fullName || product.name || '').split(/[,|\-–—\s]/)[0].trim().toLowerCase();
+
+    // Filter out any stale self-brand records from database
+    const rivalCompetitorPrices = competitorPrices.filter(cp => {
+        if (!detectedBrand || detectedBrand.length < 3) return true;
+        const pName = (cp.productName || '').toLowerCase();
+        const cName = (cp.competitorName || '').toLowerCase();
+        return !pName.includes(detectedBrand) && !cName.includes(detectedBrand);
+    });
+
+    const payload = {
+        user_id: product.userId,
+        product: {
+            name: product.fullName || product.name,
+            brand: product.brand || '',
+            category: product.category || 'General',
+            sku: product.sku,
+            baseCost: product.baseCost || 0,
+            currentPrice: product.currentPrice || 0,
+            minMargin: product.minMargin,
+            stockLevel: product.stockLevel,
+            reorderThreshold: product.reorderThreshold,
+        },
+        competitorPrices: rivalCompetitorPrices.map(cp => ({
+            name: cp.competitorName,
+            productName: cp.productName || '',
+            url: cp.competitorUrl || '',
+            price: cp.competitorPrice,
+            inStock: cp.inStock,
+            timestamp: cp.timestamp,
+        })),
+        demandSignals: demandSignals.map(ds => ({
+            searchTrendScore: ds.searchTrendScore, weatherFactor: ds.weatherFactor,
+            eventFactor: ds.eventFactor, socialSentimentScore: ds.socialSentimentScore,
+            compositeDemandScore: ds.compositeDemandScore, timestamp: ds.timestamp,
+        })),
+    };
+
+    let recommendation;
+    try {
+        const aiResponse = await axios.post(`${AI_URL}/api/optimize-price`, payload);
+        recommendation = aiResponse.data;
+    } catch (err) {
+        console.error('Python AI Service unreachable/failed in recommendationWorker:', err.message);
+
+        // Check if it was a "failed to fetch competitors" error from the AI service
+        const aiErrorData = err.response?.data;
+        if (aiErrorData?.error && aiErrorData?.message) {
+            recommendation = {
+                recommendedPrice: product.currentPrice,
+                reason: aiErrorData.message,
+                insight: JSON.stringify({
+                    summary: "Could not generate recommendation.",
+                    risk_level: "unknown",
+                    detailed_analysis: aiErrorData.message,
+                    action_items: ["Configure RAINFOREST_API_KEY or add competitor data manually"]
+                }),
+                elasticityUsed: 1.0,
+                competitorsUsed: [],
+                factors: { demand: 0, competitor: 0 },
+                revenueImpact: 0,
+                confidenceScore: 0
+            };
+        } else {
+            // Generic AI service failure fallback
+            recommendation = {
+                recommendedPrice: Math.round(product.currentPrice * 1.05),
+                reason: "Fallback recommendation generated (AI service offline). Live competitor data could not be fetched.",
+                insight: JSON.stringify({
+                    summary: "Steady demand detected.",
+                    risk_level: "low",
+                    detailed_analysis: "The AI microservice is currently unreachable. Based on basic heuristics, a 5% price increase is suggested. No live competitor data available.",
+                    action_items: ["Check AI service status", "Configure RAINFOREST_API_KEY for live competitor data"]
+                }),
+                elasticityUsed: 1.0,
+                competitorsUsed: [],
+                factors: { demand: 0.6, competitor: 0 },
+                revenueImpact: 5.0,
+                confidenceScore: 0.5
+            };
+        }
+    }
+
+    // Persist verified rival competitors back to CompetitorPrice collection and clean up self-brand records
+    if (Array.isArray(recommendation.competitorsUsed) && recommendation.competitorsUsed.length > 0) {
+        try {
+            if (detectedBrand && detectedBrand.length >= 3) {
+                await CompetitorPrice.deleteMany({
+                    productId,
+                    $or: [
+                        { productName: { $regex: detectedBrand, $options: 'i' } },
+                        { competitorName: { $regex: detectedBrand, $options: 'i' } }
+                    ]
+                });
+            }
+
+            const freshRivalRecords = recommendation.competitorsUsed
+                .filter(c => {
+                    const title = (c.productName || c.name || '').toLowerCase();
+                    const b = (c.brand || '').toLowerCase();
+                    return !detectedBrand || (!title.includes(detectedBrand) && !b.includes(detectedBrand));
+                })
+                .map(c => ({
+                    productId,
+                    competitorName: c.brand ? `${c.brand} (${c.platform || 'Online'})` : (c.platform || 'Competitor'),
+                    productName: (c.productName || c.name || '').slice(0, 150),
+                    competitorUrl: c.url || '',
+                    competitorPrice: Number(c.price),
+                    inStock: c.inStock !== false,
+                    timestamp: new Date()
+                }));
+
+            if (freshRivalRecords.length > 0) {
+                await CompetitorPrice.insertMany(freshRivalRecords);
+            }
+        } catch (syncErr) {
+            console.warn('[QueueService] Notice syncing rival competitors to database:', syncErr.message);
+        }
+    }
+
+    const saved = await PricingRecommendation.create({
+        productId,
+        userId: product.userId,
+        recommendedPrice: recommendation.recommendedPrice,
+        currentPrice: product.currentPrice,
+        reason: recommendation.reason,
+        insight: recommendation.insight,
+        elasticityUsed: recommendation.elasticityUsed,
+        competitorsUsed: recommendation.competitorsUsed,
+        factors: recommendation.factors,
+        expectedRevenueImpact: recommendation.revenueImpact,
+        confidenceScore: recommendation.confidenceScore,
+    });
+
+    return saved;
+}, { connection: redisClient });
+
+const forecastWorker = new Worker('forecastQueue', async job => {
+    const { productId, forecastDays } = job.data;
+    const product = await Product.findById(productId);
+    if (!product) throw new Error('Product not found');
+
+    const demandSignals = await DemandSignal.find({ productId }).sort({ timestamp: 1 }).limit(90);
+
+    const salesMetrics = await DailySalesMetric.find({
+        productId,
+        userId: product.userId
+    }).sort({ date: 1 }).limit(365);
+
+    const payload = {
+        user_id: product.userId,
+        product: {
+            name: product.name, stockLevel: product.stockLevel,
+            reorderThreshold: product.reorderThreshold,
+        },
+        demandHistory: demandSignals.map(ds => ({
+            score: ds.compositeDemandScore || 0, timestamp: ds.timestamp,
+        })),
+        salesHistory: salesMetrics.map(metric => ({
+            units: metric.totalUnitsSold || 0,
+            timestamp: metric.date
+        })),
+        forecastDays: forecastDays || 30,
+    };
+
+    let forecast;
+    try {
+        const aiResponse = await axios.post(`${AI_URL}/api/forecast`, payload);
+        forecast = aiResponse.data;
+    } catch (err) {
+        console.error('Python AI Service unreachable/failed in forecastWorker:', err.message);
+        forecast = {
+            predictedDemand: Math.round(product.stockLevel * 1.2),
+            recommendedStockIncrease: Math.max(0, product.reorderThreshold - product.stockLevel),
+            reason: "Fallback forecast generated (AI service offline).",
+            confidenceScore: 0.6
+        };
+    }
+
+    const saved = await InventoryForecast.create({
+        productId,
+        userId: product.userId,
+        predictedDemand: forecast.predictedDemand,
+        recommendedStockIncrease: forecast.recommendedStockIncrease,
+        currentStock: product.stockLevel,
+        forecastRange: payload.forecastDays,
+        reason: forecast.reason,
+        confidenceScore: forecast.confidenceScore,
+    });
+
+    return saved;
+}, { connection: redisClient });
+
+recommendationWorker.on('failed', (job, err) => {
+    console.error(`Recommendation Job ${job.id} failed:`, err.message);
+});
+
+forecastWorker.on('failed', (job, err) => {
+    console.error(`Forecast Job ${job.id} failed:`, err.message);
+});
+
+module.exports = {
+    recommendationQueue,
+    forecastQueue,
+    RECOMMENDATION_JOB_PREFIX,
+    FORECAST_JOB_PREFIX
+};
