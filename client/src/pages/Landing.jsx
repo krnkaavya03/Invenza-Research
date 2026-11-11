@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Link } from 'react-router-dom';
 import {
     HiOutlineLightningBolt,
@@ -45,8 +45,8 @@ const TypewriterEffect = ({ text }) => {
 
 const faqData = [
     {
-        question: 'How does Invenza protect my proprietary pricing data?',
-        answer: 'We secure your pricing, competitor tracking, and forecast data using encryption and strict access controls. Your data is used only to improve your pricing strategy and is never shared externally without permission.',
+        question: 'How does Invenza protect my product catalog and business data?',
+        answer: 'We secure your product catalog, inventory figures, cost data, and sales history using encryption and strict access controls. Your data is used only to power your own recommendations and is never shared externally without permission.',
         category: 'Security & Privacy'
     },
     {
@@ -56,36 +56,46 @@ const faqData = [
     },
     {
         question: 'How do I get started with Invenza?',
-        answer: 'Start by signing up for an account, connecting your product catalog, and reviewing the onboarding guide. Our demo and docs help you launch in minutes.',
+        answer: 'Sign up, complete onboarding, and start adding products using text, voice, or image input. The AI catalog generation assistant guides you through creating structured product entries in minutes.',
         category: 'Integrations'
     },
     {
-        question: 'Which product and commerce platforms do you support out-of-the-box?',
-        answer: 'Invenza integrates with popular platforms and marketplaces, plus it can ingest data via CSV or custom API connections.',
+        question: 'What input methods does Invenza support for catalog creation?',
+        answer: 'Invenza supports text descriptions, browser-based voice input (Web Speech API), and product image upload. The AI generates structured catalog fields — title, description, category, brand, SEO tags — from any of these inputs.',
         category: 'Integrations'
     },
     {
-        question: 'What is Explainable AI (XAI) and why does it matter?',
-        answer: 'Explainable AI provides transparent insights into pricing decisions so you can trust the recommendations and understand the drivers behind each price change.',
+        question: 'What is the Human-in-the-Loop review and why does it matter?',
+        answer: 'Before any AI-generated catalog entry is saved, the seller reviews and approves or edits the AI suggestions. This ensures catalog quality and keeps the seller in control of their own product information.',
         category: 'Pricing & AI'
     },
     {
-        question: 'How frequently does the algorithm update my product prices?',
-        answer: 'The algorithm can refresh prices in near real-time based on competitor moves, demand signals, and predefined business rules.',
+        question: 'How does Invenza forecast demand and make reorder recommendations?',
+        answer: 'Invenza uses real historical sales data processed through a time-series ML forecasting pipeline. Forecast outputs are combined with current stock levels and reorder thresholds to generate actionable reorder recommendations with confidence scores.',
         category: 'Pricing & AI'
     }
 ];
 
 const teamMembers = [
     {
-        name: 'Aryan Desale',
-        role: 'Design & Frontend Engineering',
-        linkedin: 'https://www.linkedin.com/in/aryan-desale-18330a377'
+        name: 'Kaavya K',
+        role: 'Project Lead & AI Catalog Systems',
+        linkedin: '#'
     },
     {
-        name: 'Rudra Babar',
-        role: 'Backend & AI Systems Architecture',
-        linkedin: 'http://www.linkedin.com/in/rudra-babar-8594a8379'
+        name: 'Prithi Jessica J',
+        role: 'Frontend Engineering & UX Design',
+        linkedin: '#'
+    },
+    {
+        name: 'Tharshini A',
+        role: 'Backend Development & Inventory Intelligence',
+        linkedin: '#'
+    },
+    {
+        name: 'Akash J V',
+        role: 'ML Forecasting & Data Pipeline',
+        linkedin: '#'
     }
 ];
 
@@ -157,34 +167,34 @@ export default function Landing() {
 
     const pipelineProjects = [
         {
-            title: 'Multi-Signal Data Ingestion',
-            description: 'Continuous real-time ingestion of competitor catalog prices, Google Trends search intensity, and live inventory levels.',
-            badge: 'Scraping + API',
-            metric: '350+ Signals/min',
+            title: 'Multimodal Product Input',
+            description: 'Sellers capture product information via text, browser voice input (Web Speech API), or product images. AI processes raw input into catalog-ready structured fields.',
+            badge: 'Text + Voice + Image',
+            metric: '3 Input Modalities',
             link: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop',
             color: '#1e1b4b',
         },
         {
-            title: 'Deterministic Elasticity Engine',
-            description: 'Binary search optimization paired with log-linear demand modeling to calculate profit-maximizing price equilibrium.',
-            badge: 'ML Elasticity',
-            metric: 'e = -1.85 Curve',
-            link: 'https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=800&auto=format&fit=crop',
+            title: 'AI Catalog Generation & Human Review',
+            description: 'Google Gemini generates structured title, description, category, brand, SEO tags, and missing-field suggestions. Sellers review and approve every entry before it is saved.',
+            badge: 'Gemini AI + Review',
+            metric: '200 Products Cataloged',
+            link: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=800&auto=format&fit=crop',
             color: '#0f172a',
         },
         {
-            title: 'Google Gemini Explainable AI',
-            description: 'Natural language executive explanations provide instant transparency behind every single price recommendation.',
-            badge: 'XAI Reasoning',
-            metric: '100% Auditable',
-            link: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=800&auto=format&fit=crop',
+            title: 'Historical Sales & Demand Forecasting',
+            description: 'UCI Online Retail data (89,059 matched order records, 34,995 daily metrics) feeds an ML time-series forecasting pipeline that predicts future demand and recommends stock increases.',
+            badge: 'ML Forecasting',
+            metric: '0.79 Confidence Score',
+            link: 'https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=800&auto=format&fit=crop',
             color: '#064e3b',
         },
         {
-            title: 'Autonomous Storefront Sync',
-            description: 'Automatic two-way synchronization updates price points across Shopify, Amazon, and WooCommerce with zero manual latency.',
-            badge: 'Instant Execution',
-            metric: '< 150ms Sync',
+            title: 'AI Inventory & Pricing Recommendations',
+            description: 'Combines product state, sales history, demand signals, and competitor context. Gemini-powered insights are confidence-scored and transparently explained with data-source labeling.',
+            badge: 'XAI + Confidence',
+            metric: '100% Auditable',
             link: 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=800&auto=format&fit=crop',
             color: '#3b0764',
         },
@@ -267,20 +277,20 @@ export default function Landing() {
                             </span>
                             <span>Invenza 1.0 Live</span>
                             <span className="text-slate-400 dark:text-slate-500">|</span>
-                            <span className="text-slate-600 dark:text-slate-300">Autonomous Pricing</span>
+                            <span className="text-slate-600 dark:text-slate-300">Multimodal Catalog AI</span>
                         </div>
 
                         {/* Display Headline */}
                         <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.1] mb-6">
-                            Dynamic Pricing.<br />
+                            Smart Catalogs.<br />
                             <span className="bg-gradient-to-r from-indigo-600 via-sky-600 to-emerald-600 dark:from-indigo-400 dark:via-sky-300 dark:to-emerald-400 bg-clip-text text-transparent">
-                                <TypewriterEffect text="Engineered for Profit." />
+                                <TypewriterEffect text="Intelligent Inventory." />
                             </span>
                         </h1>
 
                         {/* Value Prop Subtext */}
                         <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 mb-8 max-w-lg leading-relaxed">
-                            Autonomous elasticity modeling, real-time competitor tracking, and explainable AI to protect margins and accelerate revenue.
+                            Multimodal product input, AI-assisted catalog generation, and intelligent inventory forecasting - built for farmers, artisans, kirana stores, and MSMEs.
                         </p>
 
                         {/* CTA Buttons */}
@@ -289,7 +299,7 @@ export default function Landing() {
                                 to="/register"
                                 className="btn-primary text-sm sm:text-base px-7 py-3 rounded-xl shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2"
                             >
-                                <span>Start Optimizing Now</span>
+                                <span>Start Building Now</span>
                                 <HiOutlineArrowRight className="w-4 h-4" />
                             </Link>
                             <Link
@@ -309,7 +319,7 @@ export default function Landing() {
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <HiOutlineCheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                                <span>5-minute catalog sync</span>
+                                <span>AI catalog ready in minutes</span>
                             </div>
                         </div>
                     </div>
@@ -349,10 +359,10 @@ export default function Landing() {
                             Core Intelligence Suite
                         </div>
                         <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                            Engineered for Precision and Margin Protection
+                            Built for Small Sellers. Powered by Multimodal AI.
                         </h2>
                         <p className="text-slate-600 dark:text-slate-400 mt-2 max-w-2xl text-sm sm:text-base leading-relaxed">
-                            Replace manual guesswork with AI-assisted catalog intelligence, demand forecasting, inventory insights, and transparent recommendations.
+                            Replace manual catalog entry with AI-assisted product capture through text, voice, and image — connected to inventory tracking, demand forecasting, and transparent AI recommendations.
                         </p>
                     </div>
 
@@ -732,3 +742,9 @@ export default function Landing() {
         </div>
     );
 }
+
+
+
+
+
+
